@@ -19,11 +19,8 @@
 #include <cr_section_macros.h>
 
 #include "cdc.h"
-#include "ad9102.h"
-#include "ad9552.h"
 #include "debug.h"
 #include "led.h"
-#include "spi.h"
 #include "touch.h"
 #include <string.h>
 
@@ -114,27 +111,7 @@ static int32_t parseInt32(const char** it) {
 }
 
 void handle(const char* str) {
-
-	if (*str == 'a' || *str == 'A') {
-
-		ad9552_vco_band_auto();
-		cdc_write_str("Set to auto.\r\n");
-		return;
-	} else if (*str == 'p' || *str == 'P') {
-		const char* it = str + 2;
-		int32_t freq = parseInt32(&it);
-		++it;
-		int32_t repeats = parseInt32(&it);
-		if (*it == ' ') ++it;
-		int32_t phase = parseInt32(&it); // optional, up to 65535
-
-		int i;
-		for (i = 0; i < repeats; i++) {
-			ad9102_sine_burst(freq, phase);
-		}
-		return;
-
-	} else if (*str == 't' || *str == 'T') {
+	if (*str == 't' || *str == 'T') {
 		int i;
 		cdc_write_str("Printing raw touch samples:\r\n");
 		for (i = 0; i < 5000; i++) {
@@ -190,30 +167,6 @@ void handle(const char* str) {
 
 		cdc_write_str("Done.\r\n");
 		return;
-
-	} else if ((*str >= '0' && *str <= '9') || *str == '-') {
-
-		const char* it = str;
-		int32_t v = parseInt32(&it);
-
-		v *= 800000;
-
-		if (v < 5000000 || v > 1000000000) {
-			cdc_write_str("Invalid freq.\r\n");
-			return;
-		}
-		ad9552_frequency(v);
-		ad9552_vco_band_auto();
-		cdc_write_str("Set to freq: ");
-		cdc_write_int(v);
-		cdc_write_str("\r\n");
-		return;
-	} else if (*str == '.') {
-		ad9102_dout(1);
-		return;
-	} else if (*str == ',') {
-		ad9102_dout(0);
-		return;
 	} else if (*str == '&') {
 		cdc_write_str("TLC test mode\r\n");
 		for (;;) {
@@ -224,9 +177,6 @@ void handle(const char* str) {
 	cdc_write_str("Got this: \"");
 	cdc_write_str(str);
 	cdc_write_str("\"\r\n");
-	cdc_write_str("Btw: ");
-	cdc_write_uint(ad9102_pull_test());
-	cdc_write_str("\r\n");
 
 }
 
@@ -257,7 +207,6 @@ int main(void) {
 
 
     // Generic SPI setup
-    spi_init();
     touch_init();
 
     // USB_CONNECT enabled
@@ -270,22 +219,24 @@ int main(void) {
 
     DEBUGSTR("\r\n\r\n\r\n\r\n\r\n");
     debug_init();
-    dprintf("rs20 AD9552 test starting up...");
+    dprintf("Starting up...");
 
-    ad9552_reset();
-    ad9102_reset();
+    // Reset displays
+    // TODO
 
-    //dprintf("(0/3) AD9552...");
-    ad9552_init();
+    // CS all displays
+    // TODO
+
+    // Initialize displays
+    // TODO
+
+    // CS all displays + LED pattern
+    // TODO
+
+    // Display test image
+    // TODO
+
     led_on(LED_BLUE);
-
-	//volatile int i;
-	//for (i = 0; i < 1000000; i++);
-    while (!ad9552_is_locked());
-    led_off(LED_RED);
-
-    //dprintf("(1/3) AD9102...");
-    ad9102_init();
     led_on(LED_GREEN);
 
     //dprintf("(2/3) CDC/USB...");
@@ -294,21 +245,11 @@ int main(void) {
     //dprintf("(3/3) Done.");
     led_off(LED_BLUE);
 
-	/*for (;;) {
-		int ijk;
-		for (ijk = 0; ijk < 10000; ijk++);
-
-		touch_sample();
-
-
-	}*/
-
     for (;;) {
     	char str[80];
     	memset(str, 0, 80);
     	cdc_read_line(str, 79);
     	handle(str);
-    	//dprintf("> \"%s\"", str);
     }
 
     return 0 ;
