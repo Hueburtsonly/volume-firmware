@@ -11,10 +11,9 @@
 #include "led.h"
 #include "cdc.h"
 
-#define PIN_GND 11
-#define PIN_ADC 22
+#define PIN_ADC 23
 
-#define ADC_ADC 6 // TODO
+#define ADC_ADC 7 // TODO
 
 #define N 32
 static uint16_t recent[N];
@@ -27,12 +26,10 @@ void touch_init() {
 
 	LPC_SYSCTL->PDRUNCFG &= ~(1 << 4);
 
-	LPC_IOCON->PIO0[PIN_GND] = 0x81; // GPIO
 	LPC_IOCON->PIO0[PIN_ADC] = 0x80; // GPIO, 0x01 for ADC
 
-	LPC_GPIO->DIR[0] |= (1 << PIN_GND) | (1 << PIN_ADC);
+	LPC_GPIO->DIR[0] |= (1 << PIN_ADC);
 	LPC_GPIO->SET[0] = (1 << PIN_ADC);
-	LPC_GPIO->CLR[0] = (1 << PIN_GND);
 
 
 	// clkdiv = 10, sel = 6, software controlled mode, 10 bit

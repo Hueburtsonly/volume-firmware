@@ -20,7 +20,10 @@
 
 #include "cdc.h"
 #include "debug.h"
+#include "encoder.h"
+#include "lcd.h"
 #include "led.h"
+#include "tlc5928.h"
 #include "touch.h"
 #include <string.h>
 
@@ -111,7 +114,10 @@ static int32_t parseInt32(const char** it) {
 }
 
 void handle(const char* str) {
-	if (*str == 't' || *str == 'T') {
+	if (*str == 0) {
+		encoder_cdc_demo();
+		return;
+	} else if (*str == 't' || *str == 'T') {
 		int i;
 		cdc_write_str("Printing raw touch samples:\r\n");
 		for (i = 0; i < 5000; i++) {
@@ -122,6 +128,9 @@ void handle(const char* str) {
 
 
 		}
+		return;
+	} else if (*str == 'd' || *str == 'D') {
+		lcd_test_pattern();
 		return;
 	} else if (*str == 'r' || *str == 'R') {
 		int i;
@@ -168,10 +177,11 @@ void handle(const char* str) {
 		cdc_write_str("Done.\r\n");
 		return;
 	} else if (*str == '&') {
-		cdc_write_str("TLC test mode\r\n");
+		/*cdc_write_str("TLC test mode\r\n");
 		for (;;) {
 			test5928();
-		}
+		}*/
+		return;
 	}
 
 	cdc_write_str("Got this: \"");
@@ -184,7 +194,7 @@ void handle(const char* str) {
 int main(void) {
 
 
-	init5928();
+	//init5928();
 
     //led_on(LED_GREEN);
     //for (;;);
@@ -205,6 +215,9 @@ int main(void) {
     led_init();
     led_on(LED_RED);
 
+    lcd_init();
+    tlc5928_init();
+    encoder_init();
 
     // Generic SPI setup
     touch_init();
@@ -221,18 +234,42 @@ int main(void) {
     debug_init();
     dprintf("Starting up...");
 
+    led_on(LED_RED);
+    led_on(LED_GREEN);
+    led_off(LED_BLUE);
+
+
+    //tlc5928_broadcast(0b1001111111111111);
+
+    for (;;) {
+
     // Reset displays
-    // TODO
-
-    // CS all displays
-    // TODO
-
-    // Initialize displays
-    // TODO
+    tlc5928_broadcast(0b0110101010101010);
 
     // CS all displays + LED pattern
-    // TODO
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+//    tlc5928_broadcast(0b1001101010101010);
 
+    // Initialize displays
+    lcd_soft_init();
+
+
+    //lcd_test_pattern();
+
+    for (int kk = 0; kk < 17000; kk++) {
+    tlc5928_broadcast(0b0010101010101010);}
+    }
     // Display test image
     // TODO
 

@@ -9,8 +9,8 @@
 #define LED_H_
 
 #define LED_RED 7
-#define LED_GREEN 4
-#define LED_BLUE 5
+#define LED_GREEN 5
+#define LED_BLUE 4
 
 void led_init();
 void led_on(uint8_t led);
