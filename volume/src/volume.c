@@ -194,6 +194,7 @@ void handle(const char* str) {
 
 }
 
+volatile int debug = 0;
 
 int main(void) {
 
@@ -209,7 +210,7 @@ int main(void) {
     SystemCoreClockUpdate();
 #endif
 
-    // GPIO(6), TIMER(7,8), USART(12), ADC(13), USB(14), IOCON(16), RAM1(26), USBRAM(27)
+    // GPIO(6), TIMER(7,8,9,10), USART(12), ADC(13), USB(14), IOCON(16), RAM1(26), USBRAM(27)
     LPC_SYSCTL->SYSAHBCLKCTRL |= (1 << 6) | (0xf << 7) | (1 << 12) | (1 << 13) | (1 << 14) | (1 << 16) | (1 << 26) | (1 << 27);
 	LPC_IOCON->PIO0[18] = 0x1; // RXD=RXD
 	LPC_IOCON->PIO0[19] = 0x1; // TXD=TXD
@@ -280,8 +281,25 @@ int main(void) {
     // Display test image
     // TODO
 
+
+    LPC_TIMER32_1->TC = 0;
+    LPC_TIMER32_1->PR = 48 - 1;
+
+    LPC_TIMER32_1->TCR = 0b1;
+    LPC_TIMER32_1->MCR = 3; // Reset and interrupt on MR0 match
+    LPC_TIMER32_1->MR[0] = 99999;
+
+	NVIC_EnableIRQ(TIMER_32_1_IRQn);
+	NVIC_SetPriority(TIMER_32_1_IRQn, 0);
+
+    __enable_irq();
+
     led_on(LED_BLUE);
     led_on(LED_GREEN);
+
+    //for (;;) {
+    //	debug = LPC_TIMER32_1->IR;
+    //}
 
     //dprintf("(2/3) CDC/USB...");
     cdc_init();
@@ -289,6 +307,10 @@ int main(void) {
     //dprintf("(3/3) Done.");
     led_off(LED_BLUE);
     led_off(LED_RED);
+
+
+//for (;;) TIMER32_1_IRQHandler();
+
 
     for (;;) {
     	char str[80];
@@ -298,4 +320,16 @@ int main(void) {
     }
 
     return 0;
+}
+
+volatile int countrrz = 0;
+
+void TIMER32_1_IRQHandler (void) {
+	LPC_TIMER32_1->IR = 1;
+	/*if ((++countrrz) % 3) {
+		tlc5928_broadcast(0b1011011010101010);
+	} else {
+		tlc5928_broadcast(0b1011101011111000);
+	}*/
+
 }

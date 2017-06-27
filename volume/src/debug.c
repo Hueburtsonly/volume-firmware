@@ -13,7 +13,7 @@
 #include <stdarg.h>
 
 void dprintf(const char const* format, ...) {
-	uint32_t now = LPC_TIMER32_0->TC;
+	uint32_t now = 0; //LPC_TIMER32_0->TC;
 	char buf[160];
 
 	// 01234567890123456
@@ -50,10 +50,10 @@ void dprintf(const char const* format, ...) {
 
 void debug_init() {
 	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_CT32B0);
-	LPC_TIMER32_0->TC = 0;
-	LPC_TIMER32_0->PR = 48 - 1;
+	//LPC_TIMER32_0->TC = 0;
+	//LPC_TIMER32_0->PR = 48 - 1;
 
-	LPC_TIMER32_0->TCR = 0b1;
+	//LPC_TIMER32_0->TCR = 0b1;
 }
 
 
