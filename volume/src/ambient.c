@@ -6,6 +6,7 @@
  */
 
 #include "chip.h"
+#include "cdc.h"
 
 #define PIN_ADC 22
 #define ADC_ADC 6
@@ -17,9 +18,19 @@ void ambient_init() {
 void ambient_measure() {
 	// TODO
 
-	LPC_ADC->CR = (1 << 24) | (101 << 8) | (1 << ADC_ADC);
+	for (;;) {
+		uint32_t result = 0;
+		uint16_t i;
+		for (i = 0; i < 1000; i++) {
 
-	while (!(LPC_ADC->GDR & (1 << 31)));
+			LPC_ADC->CR = (1 << 24) | (101 << 8) | (1 << ADC_ADC);
 
-	LPC_ADC->GDR;
+			while (!(LPC_ADC->GDR & (1 << 31)));
+
+			result += (LPC_ADC->GDR >> 6) & ((1 << 10) - 1);
+		}
+
+		cdc_write_uint(result);
+		cdc_write_str("\r\n");
+	}
 }

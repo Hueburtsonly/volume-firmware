@@ -18,6 +18,7 @@
 
 #include <cr_section_macros.h>
 
+#include "ambient.h"
 #include "cdc.h"
 #include "debug.h"
 #include "encoder.h"
@@ -116,6 +117,9 @@ static int32_t parseInt32(const char** it) {
 void handle(const char* str) {
 	if (*str == 0) {
 		encoder_cdc_demo();
+		return;
+	} else if (*str == 'l' || *str == 'L') {
+		ambient_measure();
 		return;
 	} else if (*str == 't' || *str == 'T') {
 		int i;
@@ -216,6 +220,7 @@ int main(void) {
     led_on(LED_RED);
 
     lcd_init();
+    ambient_init();
     tlc5928_init();
     encoder_init();
 
@@ -241,25 +246,27 @@ int main(void) {
 
     //tlc5928_broadcast(0b1001111111111111);
 
-    for (;;) {
+    //for (;;) {
 
     // Reset displays
     tlc5928_broadcast(0b0110101010101010);
 
+    // Wait for display reset
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0010101010101010);
+
     // CS all displays + LED pattern
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-//    tlc5928_broadcast(0b1001101010101010);
+    tlc5928_broadcast(0b1000011010101010);
 
     // Initialize displays
     lcd_soft_init();
@@ -267,9 +274,9 @@ int main(void) {
 
     //lcd_test_pattern();
 
-    for (int kk = 0; kk < 17000; kk++) {
-    tlc5928_broadcast(0b0010101010101010);}
-    }
+    //for (int kk = 0; kk < 17000; kk++) {
+    //tlc5928_broadcast(0b0010101010101010);}
+    //}
     // Display test image
     // TODO
 
@@ -281,6 +288,7 @@ int main(void) {
 
     //dprintf("(3/3) Done.");
     led_off(LED_BLUE);
+    led_off(LED_RED);
 
     for (;;) {
     	char str[80];
@@ -289,5 +297,5 @@ int main(void) {
     	handle(str);
     }
 
-    return 0 ;
+    return 0;
 }

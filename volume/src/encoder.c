@@ -13,7 +13,7 @@
 #define HPL 9
 #define HSO 19 // PORT 1
 
-#define MAX_CHANNELS 8
+#define MAX_CHANNELS 16
 
 void encoder_init() {
 	LPC_IOCON->PIO1[HSO] = 0x80; // Disable pull-up/down.
@@ -44,7 +44,7 @@ void encoder_scan() {
 	__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
 	LPC_GPIO->SET[0] = (1 << HPL);
 	__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
-	cdc_write_str("Detecting...\r\n");
+	//cdc_write_str("Detecting...\r\n");
 
 	for (int base = 0; base < MAX_CHANNELS; base += 2) {
 
@@ -64,11 +64,11 @@ void encoder_scan() {
 		__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
 		// 0b{ det1 s1 b1 a1 det0 s0 b0 a0 }
 
-		cdc_write_str("  ");
+		//cdc_write_str("  ");
 
-		cdc_write_int(v);
+		//cdc_write_int(v);
 
-		cdc_write_str("\r\n");
+		//cdc_write_str("\r\n");
 
 		for (int off = 0; off < 2; off++) {
 			int ch = base + off;
@@ -111,15 +111,18 @@ void encoder_scan() {
 void encoder_cdc_demo() {
 	//cdc_write_int(result);
 	//cdc_write_str("   ");
+	for (;;) {
+		for (int rpt = 0; rpt < 1000; rpt++)
+		encoder_scan();
 
-	encoder_scan();
+		cdc_write_int(channel_count);
+		for (int ch=0; ch < channel_count; ch++) {
+			cdc_write_str("\r\n    ");
+			cdc_write_int(enccount[ch]);
+			cdc_write_str("    ");
+			cdc_write_int(btncount[ch]);
+		}
+		cdc_write_str("\r\n\r\n");
 
-	cdc_write_int(channel_count);
-	for (int ch=0; ch < channel_count; ch++) {
-		cdc_write_str("\r\n    ");
-		cdc_write_int(enccount[ch]);
-		cdc_write_str("    ");
-		cdc_write_int(btncount[ch]);
 	}
-	cdc_write_str("\r\n\r\n");
 }

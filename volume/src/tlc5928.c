@@ -30,8 +30,8 @@ void tlc5928_init() {
 }
 
 void tlc5928_broadcast(uint16_t state) {
-	for (int ch = 7; ch >= 0; --ch) {
-		datums[ch] = (uint32_t)state | ((uint32_t)state << 16);
+	for (int board = 7; board >= 0; --board) {
+		datums[board] = (uint32_t)state | ((uint32_t)state << 16);
 	}
 	tlc5928_send();
 }
@@ -40,12 +40,12 @@ void tlc5928_send() {
 	// 3.17676 kHz with 16 ch, 16 pins single file
 	// 4.32870 kHz with 16 ch, 16 pins double file from uint16_t pair
 	// 5.61152 kHz with 16 ch, 16 pins double file from uint32_t
-	int ch;
+	int board;
 	int pin;
 	LPC_GPIO->CLR[0] = (1 << LAT);
 	__NOP(); __NOP(); __NOP();
-	for (ch = 7; ch >= 0; --ch) {
-		uint32_t v = datums[ch];
+	for (board = 7; board >= 0; --board) {
+		uint32_t v = datums[board];
 		//LPC_GPIO->CLR[0] = (1 << );
 		for (pin = 0; pin < 16; pin++) {
 			__NOP(); __NOP(); __NOP();
