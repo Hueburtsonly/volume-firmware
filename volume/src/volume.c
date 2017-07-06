@@ -267,10 +267,11 @@ int main(void) {
     tlc5928_broadcast(0b0010101010101010);
 
     // CS all displays + LED pattern
-    tlc5928_broadcast(0b1000011010101010);
-
-    // Initialize displays
-    lcd_soft_init();
+//    tlc5928_broadcast(0b1000011010101010);
+    for (int i = 0; i < 8; i++) {
+    	tlc5928_demo(i & 3);
+    	lcd_soft_init(i & 3);
+    }
 
 
     //lcd_test_pattern();
@@ -287,7 +288,7 @@ int main(void) {
 
     LPC_TIMER32_1->TCR = 0b1;
     LPC_TIMER32_1->MCR = 3; // Reset and interrupt on MR0 match
-    LPC_TIMER32_1->MR[0] = 99999;
+    LPC_TIMER32_1->MR[0] = 299999;
 
 	NVIC_EnableIRQ(TIMER_32_1_IRQn);
 	NVIC_SetPriority(TIMER_32_1_IRQn, 0);
@@ -326,6 +327,9 @@ volatile int countrrz = 0;
 
 void TIMER32_1_IRQHandler (void) {
 	LPC_TIMER32_1->IR = 1;
+
+	tlc5928_demo((++countrrz) % 4);
+
 	/*if ((++countrrz) % 3) {
 		tlc5928_broadcast(0b1011011010101010);
 	} else {

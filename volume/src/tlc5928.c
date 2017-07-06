@@ -36,6 +36,25 @@ void tlc5928_broadcast(uint16_t state) {
 	tlc5928_send();
 }
 
+static const uint16_t DEMOS[4] = {
+	0b0001011010101010,
+	0b0001010101010101,
+	0b0001101010101010,
+	0b0001100101010101
+};
+
+void tlc5928_demo(int active) {
+	for (int board = 7; board >= 0; --board) {
+		uint32_t datum = 0;
+		for (int channeloff = 1; channeloff >= 0; channeloff--) {
+			int channel = board * 2 + channeloff;
+			datum = (datum << 16) | DEMOS[3 & (channel - active)] | ((channel == active) ? 0b1010000000000000 : 0);
+		}
+		datums[board] = datum;
+	}
+	tlc5928_send();
+}
+
 void tlc5928_send() {
 	// 3.17676 kHz with 16 ch, 16 pins single file
 	// 4.32870 kHz with 16 ch, 16 pins double file from uint16_t pair
