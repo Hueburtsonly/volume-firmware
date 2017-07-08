@@ -7,6 +7,7 @@
 
 #include "chip.h"
 #include "led.h"
+#include "usb.h"
 
 
 #define LAT 11
@@ -48,11 +49,11 @@ void tlc5928_demo(int active) {
 		uint32_t datum = 0;
 		for (int channeloff = 1; channeloff >= 0; channeloff--) {
 			int channel = board * 2 + channeloff;
-			datum = (datum << 16) | DEMOS[3 & (channel - active)] | ((channel == active) ? 0b1010000000000000 : 0);
+			datum = (datum << 16) | DEMOS[3 & (channel - active)] | ((channel == active) ? 0b1000000000000000 : 0);
 		}
 		datums[board] = datum;
 	}
-	tlc5928_send();
+	tlc5928_send_from_buffer();
 }
 
 void tlc5928_send() {
@@ -84,5 +85,62 @@ void tlc5928_send() {
 	LPC_GPIO->SET[0] = (1 << LAT);
 	__NOP(); __NOP(); __NOP();
 
+	LPC_GPIO->CLR[0] = (1 << LAT);
+}
+
+uint8_t frame = 0;
+
+void tlc5928_send_from_buffer() {
+	//
+
+	// 3.17676 kHz with 16 ch, 16 pins single file
+	// 4.32870 kHz with 16 ch, 16 pins double file from uint16_t pair
+	// 5.61152 kHz with 16 ch, 16 pins double file from uint32_t
+	int board;
+	int pin;
+	LPC_GPIO->CLR[0] = (1 << LAT);
+	for (board = 7; board >= 0; --board) {
+		char* boardbase = &((EPBUFFER(EP4OUT))[48 * board + 12 * frame]);
+		uint32_t v = datums[board];
+		//LPC_GPIO->CLR[0] = (1 << );
+		for (pin = 15; pin >= 0; pin--) {
+
+			uint8_t v0 = 0;
+			uint8_t v1 = 0;
+
+			if (pin >= 10) {
+				if (pin < 14) {
+					if (pin < 12) {
+						// red/green ctrl
+						if (pin == 11 - frame) {
+							v0 = 255;
+							v1 = 255;
+						}
+					} else {
+						// LCD backlight
+						if (pin == 12) {
+							v0 = 255;
+							v1 = 255;
+						}
+					}
+				} else {
+					// CS/RST
+					// noop
+				}
+			} else {
+				v0 = boardbase[pin];
+				v1 = boardbase[pin + 24];
+			}
+
+			LPC_GPIO->CLR[0] = (1 << SCL);
+			LPC_GPIO->W[0][SI0] = v0 >= 128;
+			LPC_GPIO->W[0][SI1] = v1 >= 128;
+			v <<= 1;
+			LPC_GPIO->SET[0] = (1 << SCL);
+		}
+		LPC_GPIO->CLR[0] = (1 << SCL);
+	}
+	LPC_GPIO->SET[0] = (1 << LAT);
+	frame ^= 1;
 	LPC_GPIO->CLR[0] = (1 << LAT);
 }

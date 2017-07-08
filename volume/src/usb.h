@@ -50,6 +50,10 @@
 #define EP1IN  6
 #define EP2OUT 8
 #define EP2IN  10
+#define EP3OUT 12
+#define EP3IN  14
+#define EP4OUT 16
+#define EP4IN  18
 
 #define EPBUFFER(i) ((char*)(0x20004080 + 0x40 * (i)))
 
@@ -67,6 +71,10 @@ void sendToEp0InWithStatusPacket(const void* data, uint16_t length, uint16_t max
 
 static inline void activateEndpoint(uint8_t ep, uint8_t numBytes) {
 	EPLIST[ep] = ACTIVE_EP(ep, numBytes);
+}
+
+static inline void activateIsochronousEndpoint(uint8_t ep, uint8_t numBytes) {
+	EPLIST[ep] = ACTIVE_EP(ep, numBytes) | (1 << 26);
 }
 
 static inline void waitForEndpoint(uint8_t ep) {

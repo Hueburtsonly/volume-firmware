@@ -26,6 +26,7 @@
 #include "led.h"
 #include "tlc5928.h"
 #include "touch.h"
+#include "usb.h"
 #include <string.h>
 
 
@@ -288,7 +289,7 @@ int main(void) {
 
     LPC_TIMER32_1->TCR = 0b1;
     LPC_TIMER32_1->MCR = 3; // Reset and interrupt on MR0 match
-    LPC_TIMER32_1->MR[0] = 299999;
+    LPC_TIMER32_1->MR[0] = 999;
 
 	NVIC_EnableIRQ(TIMER_32_1_IRQn);
 	NVIC_SetPriority(TIMER_32_1_IRQn, 0);
@@ -307,6 +308,7 @@ int main(void) {
 
     //dprintf("(3/3) Done.");
     led_off(LED_BLUE);
+    led_off(LED_GREEN);
     led_off(LED_RED);
 
 
@@ -314,10 +316,15 @@ int main(void) {
 
 
     for (;;) {
-    	char str[80];
-    	memset(str, 0, 80);
-    	cdc_read_line(str, 79);
-    	handle(str);
+    	//char str[80];
+    	//memset(str, 0, 80);
+    	//cdc_read_line(str, 79);
+    	//handle(str);
+
+
+		activateEndpoint(EP3OUT, 64);
+		waitForEndpoint(EP3OUT);
+		led_toggle(LED_BLUE);
     }
 
     return 0;
@@ -329,6 +336,14 @@ void TIMER32_1_IRQHandler (void) {
 	LPC_TIMER32_1->IR = 1;
 
 	tlc5928_demo((++countrrz) % 4);
+
+
+	encoder_usb_poll();
+
+
+	if (!(EPLIST[EP4OUT] & (1 << 31))) {
+		activateEndpoint(EP4OUT, 32);
+	}
 
 	/*if ((++countrrz) % 3) {
 		tlc5928_broadcast(0b1011011010101010);

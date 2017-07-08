@@ -59,11 +59,11 @@ void handleGetDescriptor(uint16_t wValue, uint16_t wIndex, uint16_t wLength) {
 	case 0x03: // String
 		{
 			uint8_t stringIndex = wValue & 0xff;
-			dprintf("  String %d.", stringIndex);
-			if (stringIndex > 4) {
-				dprintf("    Unexpected wIndex.");
-				return;
-			}
+			//dprintf("  String %d.", stringIndex);
+			//if (stringIndex > 4) {
+			//	dprintf("    Unexpected wIndex.");
+			//	return;
+			//}
 
 			uint8_t currentString = 0;
 			const uint8_t* base = USB_StringDescriptor;

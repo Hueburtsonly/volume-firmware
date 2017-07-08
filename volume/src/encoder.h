@@ -11,5 +11,6 @@
 void encoder_init();
 void encoder_scan();
 void encoder_cdc_demo();
+void encoder_usb_poll();
 
 #endif /* ENCODER_H_ */

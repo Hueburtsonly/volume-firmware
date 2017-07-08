@@ -8,6 +8,7 @@
 #include "chip.h"
 #include "led.h"
 #include "cdc.h"
+#include "usb.h"
 
 #define HSCL 8
 #define HPL 9
@@ -125,4 +126,51 @@ void encoder_cdc_demo() {
 		cdc_write_str("\r\n\r\n");
 
 	}
+}
+
+
+int16_t usbenccount[MAX_CHANNELS];
+uint16_t usbbtncount[MAX_CHANNELS];
+
+void encoder_usb_poll() {
+	// Protocol: 38-byte packet
+	// 0x00: Number channels
+	// 0x01: reserved
+	// 0x02: Touch
+	// 0x03: ^
+	// 0x04: Ambient
+	// 0x05: ^
+	// 0x06: Encoder 0 (delta quarters)
+	// 0x07: Button 0 (bit 0 = down, bit 1 = toggle state)
+	// 0x08: Encoder 1
+	// ...
+	// 0x24: Encoder 15
+	// 0x25: Encoder 16
+	encoder_scan();
+
+	if (EPLIST[EP3IN] & (1 << 31)) {
+		// Previous packet hasn't been collected yet
+		return;
+	}
+
+	(EPBUFFER(EP3IN))[0] = channel_count;
+
+
+
+	for (int ch = 0; ch < channel_count; ch++) {
+
+		int16_t delta = (enccount[ch] / 4) - usbenccount[ch];
+		if (delta > 127) delta = 127;
+		if (delta < -127) delta = -127;
+		usbenccount[ch] += delta;
+
+		(EPBUFFER(EP3IN))[6 + ch * 2] = delta;
+		(EPBUFFER(EP3IN))[6 + ch * 2 + 1] = btncount[ch];
+	}
+
+
+	activateEndpoint(EP3IN, 38);
+
+
+//	sendToEndpoint(EP1IN, data, length);
 }

@@ -14,5 +14,6 @@ void tlc5928_init();
 void tlc5928_broadcast(uint16_t state);
 void tlc5928_send();
 void tlc5928_demo(int active);
+void tlc5928_send_from_buffer();
 
 #endif /* TLC5928_H_ */

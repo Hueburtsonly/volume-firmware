@@ -55,9 +55,17 @@
  */
 #define USB_CDC_CIF_NUM         0
 #define USB_CDC_DIF_NUM         1
+#define USB_VOLUME_VIF_NUM         2
+
 #define USB_CDC_IN_EP           0x81
 #define USB_CDC_OUT_EP          0x01
 #define USB_CDC_INT_EP          0x82
+#define USB_VOLUME_LCD_OUT_EP          0x03
+#define USB_VOLUME_INT_EP          0x83
+#define USB_VOLUME_LED_OUT_EP          0x04
+
+//#define CDCBIT
+#define BONUS
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -74,12 +82,12 @@ ALIGNED(4) const uint8_t USB_DeviceDescriptor[] = {
 	USB_DEVICE_DESC_SIZE,				/* bLength */
 	USB_DEVICE_DESCRIPTOR_TYPE,			/* bDescriptorType */
 	WBVAL(0x0200),						/* bcdUSB 0x0200 */
-	0xEF,								/* bDeviceClass */
-	0x02,								/* bDeviceSubClass */
-	0x01,								/* bDeviceProtocol */
+	0xFE,								/* bDeviceClass */
+	0x00,								/* bDeviceSubClass */
+	0x00,								/* bDeviceProtocol */
 	USB_MAX_PACKET0,					/* bMaxPacketSize0 */
-	WBVAL(0x1FC9),						/* idVendor */
-	WBVAL(0x0089),						/* idProduct */
+	WBVAL(0x6b56),						/* idVendor */
+	WBVAL(0x8802),						/* idProduct */
 	WBVAL(0x0100),						/* bcdDevice */
 	0x01,								/* iManufacturer */
 	0x02,								/* iProduct */
@@ -97,20 +105,32 @@ ALIGNED(4) uint8_t USB_FsConfigDescriptor[] = {
 	USB_CONFIGURATION_DESCRIPTOR_TYPE,		/* bDescriptorType */
 	WBVAL(									/* wTotalLength */
 		USB_CONFIGURATION_DESC_SIZE     +
+#ifdef CDCBIT
 		USB_INTERFACE_ASSOC_DESC_SIZE   +	/* interface association descriptor */
 		USB_INTERFACE_DESC_SIZE         +	/* communication control interface */
 		0x0013                          +	/* CDC functions */
 		1 * USB_ENDPOINT_DESC_SIZE      +	/* interrupt endpoint */
 		USB_INTERFACE_DESC_SIZE         +	/* communication data interface */
 		2 * USB_ENDPOINT_DESC_SIZE      +	/* bulk endpoints */
+#endif
+#ifdef BONUS
+		USB_INTERFACE_DESC_SIZE         +	/* volume controller interface */
+		3 * USB_ENDPOINT_DESC_SIZE      +	/* three different endpoints */
+#endif
 		0
 		),
-	0x02,									/* bNumInterfaces */
+#ifdef CDCBIT
+	2 +
+#endif
+#ifdef BONUS
+	1 +
+#endif
+	0,									/* bNumInterfaces */
 	0x01,									/* bConfigurationValue */
 	0x00,									/* iConfiguration */
 	USB_CONFIG_SELF_POWERED,				/* bmAttributes  */
 	USB_CONFIG_POWER_MA(500),				/* bMaxPower */
-
+#ifdef CDCBIT
 	/* Interface association descriptor IAD*/
 	USB_INTERFACE_ASSOC_DESC_SIZE,		/* bLength */
 	USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE,	/* bDescriptorType */
@@ -185,6 +205,45 @@ ALIGNED(4) uint8_t USB_FsConfigDescriptor[] = {
 	USB_ENDPOINT_TYPE_BULK,				/* bmAttributes */
 	WBVAL(64),							/* wMaxPacketSize */
 	0x00,								/* bInterval: ignore for Bulk transfer */
+
+
+#endif
+
+#ifdef BONUS
+
+	/* Interface 2, Alternate Setting 0, Volume Controller Special interface descriptor */
+	USB_INTERFACE_DESC_SIZE,			/* bLength */
+	USB_INTERFACE_DESCRIPTOR_TYPE,		/* bDescriptorType */
+	USB_VOLUME_VIF_NUM,
+		0x00,								/* bAlternateSetting: no alternate setting */
+		0x03,								/* bNumEndpoints: three endpoints used */
+	0xFE, /* bInterfaceClass: Application Specific Class */
+		0x00,								/* bInterfaceSubClass: no subclass available */
+		0x00,								/* bInterfaceProtocol: no protocol used */
+	0x05,
+	/* Endpoint, EP Bulk Out */
+		USB_ENDPOINT_DESC_SIZE,				/* bLength */
+		USB_ENDPOINT_DESCRIPTOR_TYPE,		/* bDescriptorType */
+		USB_VOLUME_LCD_OUT_EP,						/* bEndpointAddress */
+		USB_ENDPOINT_TYPE_BULK,				/* bmAttributes */
+		WBVAL(64),		/* wMaxPacketSize */
+		0x00,								/* bInterval: ignore for Bulk transfer */
+	/* Endpoint, EP Interrupt In */
+		USB_ENDPOINT_DESC_SIZE,				/* bLength */
+		USB_ENDPOINT_DESCRIPTOR_TYPE,		/* bDescriptorType */
+		USB_VOLUME_INT_EP,						/* bEndpointAddress */
+		USB_ENDPOINT_TYPE_INTERRUPT,				/* bmAttributes */
+		WBVAL(38),		/* wMaxPacketSize */
+		16,	/* bInterval: 16ms */
+	/* Endpoint, EP Isochronous Out */
+		USB_ENDPOINT_DESC_SIZE,				/* bLength */
+		USB_ENDPOINT_DESCRIPTOR_TYPE,		/* bDescriptorType */
+		USB_VOLUME_LED_OUT_EP,						/* bEndpointAddress */
+		USB_ENDPOINT_TYPE_BULK /*ISOCHRONOUS*/,				/* bmAttributes */
+		WBVAL(32),		/* wMaxPacketSize */
+		0x01,	/* bInterval: 1ms for isochronous */
+#endif
+
 	/* Terminator */
 	0									/* bLength */
 };
@@ -250,6 +309,13 @@ ALIGNED(4) const uint8_t USB_StringDescriptor[] = {
 	's', 0,
 	'0', 0,
 	'2', 0,
+	/* Index 0x05: Interface 1, Alternate Setting 0 */
+	( 4 * 2 + 2),						/* bLength (4 Char + Type + lenght) */
+	USB_STRING_DESCRIPTOR_TYPE,			/* bDescriptorType */
+	'v', 0,
+	'o', 0,
+	'l', 0,
+	'u', 0,
 };
 
 

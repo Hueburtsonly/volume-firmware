@@ -26,3 +26,7 @@ void led_on(uint8_t led) {
 void led_off(uint8_t led) {
 	LPC_GPIO->SET[0] = ALL_LEDS & (1 << led);
 }
+
+void led_toggle(uint8_t led) {
+	LPC_GPIO->NOT[0] = ALL_LEDS & (1 << led);
+}
