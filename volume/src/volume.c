@@ -290,7 +290,7 @@ int main(void) {
 
     LPC_TIMER32_1->TCR = 0b1;
     LPC_TIMER32_1->MCR = 3; // Reset and interrupt on MR0 match
-    LPC_TIMER32_1->MR[0] = 999;
+    LPC_TIMER32_1->MR[0] = 199;
 
 	NVIC_EnableIRQ(TIMER_32_1_IRQn);
 	NVIC_SetPriority(TIMER_32_1_IRQn, 0);
@@ -318,6 +318,10 @@ int main(void) {
     activateEndpoint(EP4OUT, 50);
 
 #define DISPLAYBUF 516
+
+    //for (;;) {
+    //	LPC_GPIO->NOT[0] = (1 << 23);
+    //}
 
     for (;;) {
     	//char str[80];
@@ -361,20 +365,8 @@ int main(void) {
 volatile int countrrz = 0;
 
 void TIMER32_1_IRQHandler (void) {
+
+	LPC_GPIO->CLR[0] = (1 << 23);
 	LPC_TIMER32_1->IR = 1;
-
-	tlc5928_send_from_buffer();
-
-
-	encoder_usb_poll();
-
-
-
-
-	/*if ((++countrrz) % 3) {
-		tlc5928_broadcast(0b1011011010101010);
-	} else {
-		tlc5928_broadcast(0b1011101011111000);
-	}*/
-
+	handle_timer_interrupt();
 }

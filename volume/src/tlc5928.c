@@ -20,6 +20,48 @@ volatile uint32_t datums[8];
 
 uint8_t buffer[32][14];
 
+#define DS_CYCLES 40
+
+
+// EBR algorithm
+// From Dan Gordon, "A derandomization approach to recovering bandlimited signals across a wide range of random sampling rates"
+#define S(i) (((i) < k) ? (i) : ((i)+1))
+void ebr(uint8_t* a, uint8_t n) {
+	if (n == 1) {
+		a[0] = 0;
+		return;
+	}
+	uint8_t k = n / 2;
+
+	// Recursive call with half the array size
+	ebr(a, k);
+
+	if ((n & 1) == 0) {	// n is even
+		// Double the positions of the recursive result
+		for (int i = k - 1; i >= 1; i--) {
+			a[2 * i] = a[i];
+		}
+		// Fill the empty space
+		for (int i = 1; i < n; i += 2) {
+			a[i] = a[i - 1] + k;
+		}
+	} else { // n is odd
+		// Double the positions of the recursive result
+		for (int i = k - 1; i >= 1; i--) {
+			a[S(2 * i)] = a[i];
+		}
+		// Fill the empty space
+		for (int i = 1; i < n-1; i += 2) {
+			a[S(i)] = a[S(i - 1)] + k + 1;
+		}
+		a[k] = k;
+	}
+}
+#undef S
+
+uint8_t DS_THRESH[DS_CYCLES];
+uint8_t COL_FLIP[DS_CYCLES];
+
 void tlc5928_init() {
 
 	for (int startch = 0; startch < 32; startch += 2) {
@@ -29,6 +71,16 @@ void tlc5928_init() {
 		}
 		buffer[startch][13] = 0xff;
 		buffer[startch+1][13] = 0xff;
+	}
+
+	ebr(DS_THRESH, DS_CYCLES);
+
+	int count = 0;
+	for (int i = 0; i < DS_CYCLES; i++) {
+		if (COL_FLIP[i] = ((i % 10) == 0) ? 1 : 0) count++;
+	}
+	if ((count & 1) == 0) {
+		COL_FLIP[0] = 0;
 	}
 
     LPC_IOCON->PIO0[LAT] = 0x81;
@@ -110,10 +162,14 @@ void setCsLcd(int desired) {
 }
 
 
-uint8_t frame = 0;
+uint8_t subframe = 0;
+uint8_t colour = 0;
 
-void tlc5928_send_from_buffer() {
-	//
+void handle_timer_interrupt() {
+	LPC_GPIO->CLR[0] = (1 << BLANK);
+	LPC_GPIO->SET[0] = (1 << LAT);
+
+	uint8_t thresh = DS_THRESH[subframe];
 
 	// 3.17676 kHz with 16 ch, 16 pins single file
 	// 4.32870 kHz with 16 ch, 16 pins double file from uint16_t pair
@@ -122,7 +178,7 @@ void tlc5928_send_from_buffer() {
 	int pin;
 	LPC_GPIO->CLR[0] = (1 << LAT);
 	int chosenCsLcd = desiredCsLcd;
-	for (board = 7; board >= 0; --board) {
+	for (board = 3; board >= 0; --board) {
 		// LCD Chip select
 		LPC_GPIO->CLR[0] = (1 << SCL);
 		LPC_GPIO->W[0][SI0] = chosenCsLcd == 2*board;
@@ -135,57 +191,22 @@ void tlc5928_send_from_buffer() {
 		LPC_GPIO->W[0][SI1] = 0;
 		LPC_GPIO->SET[0] = (1 << SCL);
 
-
-		//char* boardbase = &((EPBUFFER(EP4OUT))[48 * board + 12 * frame + 2]);
-		int indexbase = 4 * board + frame;
-		//uint32_t v = datums[board];
-		//LPC_GPIO->CLR[0] = (1 << );
+		int indexbase = 4 * board + colour;
 		for (pin = 13; pin >= 0; pin--) {
-
-			uint8_t v0 = 0;
-			uint8_t v1 = 0;
-/*
-			if (pin >= 10) {
-				if (pin < 14) {
-					if (pin < 12) {
-						// red/green ctrl
-						if (pin == 11 - frame) {
-							v0 = 255;
-							v1 = 255;
-						}
-					} else {
-						// LCD backlight
-						if (pin == 12) {
-							v0 = 255;
-							v1 = 255;
-						}
-					}
-				} else {
-					// CS/RST
-					// noop
-				}
-			} else {
-				v0 = boardbase[pin];
-				v1 = boardbase[pin + 24];
-			}*/
-
-			if (pin < 14) {
-				v0 = buffer[indexbase][pin];
-				v1 = buffer[indexbase + 2][pin];
-			}
-
 			LPC_GPIO->CLR[0] = (1 << SCL);
-			LPC_GPIO->W[0][SI0] = v0 >= 128;
-			LPC_GPIO->W[0][SI1] = v1 >= 128;
-			//v <<= 1;
+			LPC_GPIO->W[0][SI0] = buffer[indexbase][pin] > thresh;
+			LPC_GPIO->W[0][SI1] = buffer[indexbase + 2][pin] > thresh;
 			LPC_GPIO->SET[0] = (1 << SCL);
 		}
 		LPC_GPIO->CLR[0] = (1 << SCL);
 	}
-	LPC_GPIO->SET[0] = (1 << LAT);
-	frame ^= 1;
-	LPC_GPIO->CLR[0] = (1 << LAT);
+
+	subframe = (subframe + 1) % DS_CYCLES;
+	//if (subframe == 0)
+	colour ^= COL_FLIP[subframe];
 	actualCsLcd = chosenCsLcd;
+
+	encoder_usb_poll();
 }
 
 void handleInterruptOnEp4Out() {
