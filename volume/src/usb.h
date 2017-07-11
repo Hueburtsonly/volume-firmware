@@ -81,6 +81,11 @@ static inline void waitForEndpoint(uint8_t ep) {
 	while (EPLIST[ep] & (1 << 31));
 }
 
+static inline int16_t packetLength(uint8_t ep) {
+	uint16_t nBytes = (EPLIST[ep] >> 16) & 0x3ff;
+	return 64 - nBytes;
+}
+
 // This is a callback that is called whenever a SETUP packet arrives
 // that usb.c doesn't know how to handle.
 void handleNonGenericSetup(uint8_t bmRequestType,

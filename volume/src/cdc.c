@@ -135,21 +135,6 @@ void cdc_write(const char* data, uint32_t length) {
 	sendToEndpoint(EP1IN, data, length);
 }
 
-void USB_IRQHandler(void) {
-	if (LPC_USB->INTSTAT & (1 << 2)) {
-		// EP1OUT
-		LPC_USB->INTSTAT = 1 << 2;
-
-		// TODO: Handle EP1OUT (MCU RX) IRQ.
-	}
-	if (LPC_USB->INTSTAT & (1 << 3)) {
-		// EP1IN
-		LPC_USB->INTSTAT = 1 << 3;
-
-		// TODO: Handle EP1IN (MCU TX) IRQ.
-	}
-}
-
 void cdc_init() {
 	usb_init();
 

@@ -18,8 +18,18 @@
 
 volatile uint32_t datums[8];
 
+uint8_t buffer[32][14];
 
 void tlc5928_init() {
+
+	for (int startch = 0; startch < 32; startch += 2) {
+		for (int pin = 10; pin < 12; pin++) {
+			buffer[startch][pin] = (pin == 11) ? 0xff: 0;
+			buffer[startch+1][pin] = (pin == 10) ? 0xff: 0;
+		}
+		buffer[startch][13] = 0xff;
+		buffer[startch+1][13] = 0xff;
+	}
 
     LPC_IOCON->PIO0[LAT] = 0x81;
     LPC_IOCON->PIO0[SCL] = 0x81;
@@ -28,6 +38,9 @@ void tlc5928_init() {
 
 	LPC_GPIO->DIR[0] |= (1 << LAT) | (1 << SCL) | (1 << SI0) | (1 << SI1) | (1 << BLANK);
 	LPC_GPIO->SET[0] = (1 << LAT) | (1 << SCL) | (1 << SI0) | (1 << SI1) | (0 << BLANK);
+
+	// Enable interrupt on EP4OUT (LED stuffs)
+	LPC_USB->INTEN |= 1 << 8;
 }
 
 void tlc5928_broadcast(uint16_t state) {
@@ -53,7 +66,7 @@ void tlc5928_demo(int active) {
 		}
 		datums[board] = datum;
 	}
-	tlc5928_send_from_buffer();
+	tlc5928_send();
 }
 
 void tlc5928_send() {
@@ -88,6 +101,15 @@ void tlc5928_send() {
 	LPC_GPIO->CLR[0] = (1 << LAT);
 }
 
+volatile int desiredCsLcd = -1;
+volatile int actualCsLcd = -1;
+
+void setCsLcd(int desired) {
+	desiredCsLcd = desired;
+	while (actualCsLcd != desired);
+}
+
+
 uint8_t frame = 0;
 
 void tlc5928_send_from_buffer() {
@@ -99,15 +121,30 @@ void tlc5928_send_from_buffer() {
 	int board;
 	int pin;
 	LPC_GPIO->CLR[0] = (1 << LAT);
+	int chosenCsLcd = desiredCsLcd;
 	for (board = 7; board >= 0; --board) {
-		char* boardbase = &((EPBUFFER(EP4OUT))[48 * board + 12 * frame]);
-		uint32_t v = datums[board];
+		// LCD Chip select
+		LPC_GPIO->CLR[0] = (1 << SCL);
+		LPC_GPIO->W[0][SI0] = chosenCsLcd == 2*board;
+		LPC_GPIO->W[0][SI1] = chosenCsLcd == 2*board+1;
+		LPC_GPIO->SET[0] = (1 << SCL);
+
+		// LCD Reset
+		LPC_GPIO->CLR[0] = (1 << SCL);
+		LPC_GPIO->W[0][SI0] = 0;
+		LPC_GPIO->W[0][SI1] = 0;
+		LPC_GPIO->SET[0] = (1 << SCL);
+
+
+		//char* boardbase = &((EPBUFFER(EP4OUT))[48 * board + 12 * frame + 2]);
+		int indexbase = 4 * board + frame;
+		//uint32_t v = datums[board];
 		//LPC_GPIO->CLR[0] = (1 << );
-		for (pin = 15; pin >= 0; pin--) {
+		for (pin = 13; pin >= 0; pin--) {
 
 			uint8_t v0 = 0;
 			uint8_t v1 = 0;
-
+/*
 			if (pin >= 10) {
 				if (pin < 14) {
 					if (pin < 12) {
@@ -130,12 +167,17 @@ void tlc5928_send_from_buffer() {
 			} else {
 				v0 = boardbase[pin];
 				v1 = boardbase[pin + 24];
+			}*/
+
+			if (pin < 14) {
+				v0 = buffer[indexbase][pin];
+				v1 = buffer[indexbase + 2][pin];
 			}
 
 			LPC_GPIO->CLR[0] = (1 << SCL);
 			LPC_GPIO->W[0][SI0] = v0 >= 128;
 			LPC_GPIO->W[0][SI1] = v1 >= 128;
-			v <<= 1;
+			//v <<= 1;
 			LPC_GPIO->SET[0] = (1 << SCL);
 		}
 		LPC_GPIO->CLR[0] = (1 << SCL);
@@ -143,4 +185,34 @@ void tlc5928_send_from_buffer() {
 	LPC_GPIO->SET[0] = (1 << LAT);
 	frame ^= 1;
 	LPC_GPIO->CLR[0] = (1 << LAT);
+	actualCsLcd = chosenCsLcd;
+}
+
+void handleInterruptOnEp4Out() {
+	if (!(EPLIST[EP4OUT] & (1 << 31))) {
+
+		uint8_t startch = EPBUFFER(EP4OUT)[0] * 2;
+
+
+		for (int led = 0; led < 12; led++) {
+			int pin = led;
+			if (led >= 10) pin += 2;
+			buffer[startch][pin] = EPBUFFER(EP4OUT)[2 + led];
+			buffer[startch+1][pin] = EPBUFFER(EP4OUT)[2 + 12 + led];
+			buffer[startch+2][pin] = EPBUFFER(EP4OUT)[2 + 24 + led];
+			buffer[startch+3][pin] = EPBUFFER(EP4OUT)[2 + 36 + led];
+		}
+
+		activateEndpoint(EP4OUT, 50);
+	}
+}
+
+void USB_IRQHandler(void) {
+	if (LPC_USB->INTSTAT & (1 << 8)) {
+		// EP4OUT
+		LPC_USB->INTSTAT = 1 << 8;
+
+		handleInterruptOnEp4Out();
+
+	}
 }

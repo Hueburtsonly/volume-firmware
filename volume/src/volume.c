@@ -27,6 +27,7 @@
 #include "tlc5928.h"
 #include "touch.h"
 #include "usb.h"
+#include "usbd/usbd.h"
 #include <string.h>
 
 
@@ -314,6 +315,9 @@ int main(void) {
 
 //for (;;) TIMER32_1_IRQHandler();
 
+    activateEndpoint(EP4OUT, 50);
+
+#define DISPLAYBUF 516
 
     for (;;) {
     	//char str[80];
@@ -321,9 +325,33 @@ int main(void) {
     	//cdc_read_line(str, 79);
     	//handle(str);
 
+    	ALIGNED(4) char displayBuf[DISPLAYBUF];
 
 		activateEndpoint(EP3OUT, 64);
 		waitForEndpoint(EP3OUT);
+		int16_t packetLen = packetLength(EP3OUT);
+		memcpy(displayBuf, EPBUFFER(EP3OUT), packetLen);
+		uint16_t bufSize = ((uint16_t*)displayBuf)[0];
+		if (bufSize != DISPLAYBUF) {
+			continue;
+		}
+		uint16_t lcdToUpdate = ((uint16_t*)displayBuf)[1];
+
+		setCsLcd(lcdToUpdate);
+
+		int16_t upto = packetLen;
+
+		while (upto != DISPLAYBUF) {
+			activateEndpoint(EP3OUT, 64);
+			waitForEndpoint(EP3OUT);
+			packetLen = packetLength(EP3OUT);
+			if (upto + packetLen > DISPLAYBUF) break;
+			memcpy(displayBuf + upto, EPBUFFER(EP3OUT), packetLen);
+			upto += packetLen;
+		}
+
+		lcd_disp(displayBuf + 4);
+
 		led_toggle(LED_BLUE);
     }
 
@@ -335,15 +363,13 @@ volatile int countrrz = 0;
 void TIMER32_1_IRQHandler (void) {
 	LPC_TIMER32_1->IR = 1;
 
-	tlc5928_demo((++countrrz) % 4);
+	tlc5928_send_from_buffer();
 
 
 	encoder_usb_poll();
 
 
-	if (!(EPLIST[EP4OUT] & (1 << 31))) {
-		activateEndpoint(EP4OUT, 32);
-	}
+
 
 	/*if ((++countrrz) % 3) {
 		tlc5928_broadcast(0b1011011010101010);

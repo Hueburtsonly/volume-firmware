@@ -171,7 +171,7 @@ static void usb_pin_clk_init(void)
 	NVIC_EnableIRQ(USB0_IRQn);
 	NVIC_EnableIRQ(USB0_FIQ_IRQn);
 	NVIC_SetPriority(USB0_IRQn, 3);
-	NVIC_SetPriority(USB0_FIQ_IRQn, 3);
+	NVIC_SetPriority(USB0_FIQ_IRQn, 2);
 }
 
 void USB_FIQHandler(void) {
@@ -198,7 +198,7 @@ void usb_init() {
     EPLIST[1] = EPOFFSET(SETUP);
 
     // Enable FIQ interrupt for SETUP packets.
-    LPC_USB->INTEN = 1 << 0;
+    LPC_USB->INTEN |= 1 << 0;
     LPC_USB->INTROUTING = 1 << 0;
 
     // Enable USB peripheral, enable connection.

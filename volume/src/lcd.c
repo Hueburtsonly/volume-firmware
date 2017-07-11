@@ -66,8 +66,9 @@ const uint8_t TEST_IMAGES[4][512] = {
 
 
 
-void dispPic(unsigned char *lcd_string)
+void lcd_disp(unsigned char *lcd_string)
 {
+	char is_blank = 1;
 	unsigned int i,j;
 	unsigned char page = 0xB0;			//Page Address + 0xB0
 	comm_out(0xAE);					//Display OFF
@@ -77,12 +78,14 @@ void dispPic(unsigned char *lcd_string)
 		comm_out(0x10);				//column address upper 4 bits + 0x10
 		comm_out(0x00);				//column address lower 4 bits + 0x00
 		for(j=0;j<128;j++){			//128 columns wide
+			if (*lcd_string) is_blank = 0;
 			data_out(*lcd_string);		//send picture data
 			lcd_string++;			//point to next picture data
 			}
 		page++;					//after 128 columns, go to next page
    		}
-	comm_out(0xAF);					//Display ON
+	if (!is_blank)
+		comm_out(0xAF);					//Display ON
 }
 
 void lcd_soft_init(int index) {
@@ -93,13 +96,13 @@ void lcd_soft_init(int index) {
 	comm_out(0x2F); // Power supply operating mode 7
 	comm_out(0x21); // Internal resistor ratio 1
 	comm_out(0x81); // Set Vs output voltage electronic volume register...
-	comm_out(0x2F); // .. to 0x3F (max).
+	comm_out(0x20); // .. to 0x3F (max).
 
 	//comm_out(0xA5); // ALL POINTS ON
 	//comm_out(0xA5); // ALL POINTS ON
 
 	//while(1){						//loop forever
-		dispPic(TEST_IMAGES[index & 3]);					//show image
+	lcd_disp(TEST_IMAGES[index & 3]);					//show image
 		//for (;;);
 		//delay(1000);					//wait 1s
 		//dispPic(graphic1);

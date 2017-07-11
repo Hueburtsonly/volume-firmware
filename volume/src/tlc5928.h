@@ -15,5 +15,6 @@ void tlc5928_broadcast(uint16_t state);
 void tlc5928_send();
 void tlc5928_demo(int active);
 void tlc5928_send_from_buffer();
+void setCsLcd(int desired);
 
 #endif /* TLC5928_H_ */
