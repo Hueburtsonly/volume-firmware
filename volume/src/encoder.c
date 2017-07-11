@@ -5,9 +5,11 @@
  *      Author: Hueburtsonly
  */
 
+#include "ambient.h"
+#include "cdc.h"
 #include "chip.h"
 #include "led.h"
-#include "cdc.h"
+#include "touch.h"
 #include "usb.h"
 
 #define HSCL 8
@@ -154,8 +156,10 @@ void encoder_usb_poll() {
 	}
 
 	(EPBUFFER(EP3IN))[0] = channel_count;
-
-
+	(EPBUFFER(EP3IN))[2] = touch_result & 0xff;
+	(EPBUFFER(EP3IN))[3] = (touch_result >> 8) & 0xff;
+	(EPBUFFER(EP3IN))[4] = ambient_result & 0xff;
+	(EPBUFFER(EP3IN))[5] = (ambient_result >> 8) & 0xff;
 
 	for (int ch = 0; ch < channel_count; ch++) {
 

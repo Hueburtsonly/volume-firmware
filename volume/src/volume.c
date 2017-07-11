@@ -100,7 +100,7 @@ static void setupBoardClocking(void)
 	/* Wait for PLL to lock */
 	while (!Chip_Clock_IsUSBPLLLocked()) {}
 }
-
+/*
 static int32_t parseInt32(const char** it) {
 	int32_t v = 0;
 	int m = 1;
@@ -183,10 +183,10 @@ void handle(const char* str) {
 		cdc_write_str("Done.\r\n");
 		return;
 	} else if (*str == '&') {
-		/*cdc_write_str("TLC test mode\r\n");
+		/ *cdc_write_str("TLC test mode\r\n");
 		for (;;) {
 			test5928();
-		}*/
+		}* /
 		return;
 	}
 
@@ -195,7 +195,7 @@ void handle(const char* str) {
 	cdc_write_str("\"\r\n");
 
 }
-
+*/
 volatile int debug = 0;
 
 int main(void) {
@@ -322,24 +322,24 @@ int main(void) {
     //for (;;) {
     //	LPC_GPIO->NOT[0] = (1 << 23);
     //}
-
+#define EX(v, k) ((uint16_t)((displayBuf)[(k)]) | ((uint16_t)((displayBuf)[(k)+1]) << 8))
     for (;;) {
     	//char str[80];
     	//memset(str, 0, 80);
     	//cdc_read_line(str, 79);
     	//handle(str);
 
-    	ALIGNED(4) char displayBuf[DISPLAYBUF];
+    	ALIGNED(4) uint8_t displayBuf[DISPLAYBUF];
 
 		activateEndpoint(EP3OUT, 64);
 		waitForEndpoint(EP3OUT);
 		int16_t packetLen = packetLength(EP3OUT);
 		memcpy(displayBuf, EPBUFFER(EP3OUT), packetLen);
-		uint16_t bufSize = ((uint16_t*)displayBuf)[0];
+		uint16_t bufSize = EX(displayBuf, 0); //((uint16_t*)displayBuf)[0];
 		if (bufSize != DISPLAYBUF) {
 			continue;
 		}
-		uint16_t lcdToUpdate = ((uint16_t*)displayBuf)[1];
+		uint16_t lcdToUpdate = EX(displayBuf, 2); //((uint16_t*)displayBuf)[1];
 
 		setCsLcd(lcdToUpdate);
 
@@ -365,8 +365,6 @@ int main(void) {
 volatile int countrrz = 0;
 
 void TIMER32_1_IRQHandler (void) {
-
-	LPC_GPIO->CLR[0] = (1 << 23);
 	LPC_TIMER32_1->IR = 1;
 	handle_timer_interrupt();
 }

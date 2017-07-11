@@ -12,6 +12,7 @@
 
 void touch_init();
 
-uint16_t touch_sample();
+extern uint16_t touch_result;
+void touch_measure();
 
 #endif /* TOUCH_H_ */

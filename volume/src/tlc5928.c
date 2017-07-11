@@ -5,8 +5,10 @@
  *      Author: Hueburtsonly
  */
 
+#include "ambient.h"
 #include "chip.h"
 #include "led.h"
+#include "touch.h"
 #include "usb.h"
 
 
@@ -20,8 +22,8 @@ volatile uint32_t datums[8];
 
 uint8_t buffer[32][14];
 
-#define DS_CYCLES 40
-
+#define SUBFRAMES 40
+#define DS_LEN (SUBFRAMES/2-1)
 
 // EBR algorithm
 // From Dan Gordon, "A derandomization approach to recovering bandlimited signals across a wide range of random sampling rates"
@@ -59,8 +61,8 @@ void ebr(uint8_t* a, uint8_t n) {
 }
 #undef S
 
-uint8_t DS_THRESH[DS_CYCLES];
-uint8_t COL_FLIP[DS_CYCLES];
+uint8_t DS_THRESH[DS_LEN];
+uint8_t COL_FLIP[SUBFRAMES];
 
 void tlc5928_init() {
 
@@ -73,10 +75,13 @@ void tlc5928_init() {
 		buffer[startch+1][13] = 0xff;
 	}
 
-	ebr(DS_THRESH, DS_CYCLES);
+	ebr(DS_THRESH, DS_LEN);
+	for (int i = 0; i < DS_LEN; i++) {
+		DS_THRESH[i] = (DS_THRESH[i] + 1)*4;
+	}
 
 	int count = 0;
-	for (int i = 0; i < DS_CYCLES; i++) {
+	for (int i = 0; i < SUBFRAMES; i++) {
 		if (COL_FLIP[i] = ((i % 10) == 0) ? 1 : 0) count++;
 	}
 	if ((count & 1) == 0) {
@@ -155,6 +160,7 @@ void tlc5928_send() {
 
 volatile int desiredCsLcd = -1;
 volatile int actualCsLcd = -1;
+volatile int chosenCsLcd = -1;
 
 void setCsLcd(int desired) {
 	desiredCsLcd = desired;
@@ -166,47 +172,81 @@ uint8_t subframe = 0;
 uint8_t colour = 0;
 
 void handle_timer_interrupt() {
+	LPC_GPIO->CLR[0] = (1 << 23 /* touch sensor */);
 	LPC_GPIO->CLR[0] = (1 << BLANK);
 	LPC_GPIO->SET[0] = (1 << LAT);
-
-	uint8_t thresh = DS_THRESH[subframe];
-
-	// 3.17676 kHz with 16 ch, 16 pins single file
-	// 4.32870 kHz with 16 ch, 16 pins double file from uint16_t pair
-	// 5.61152 kHz with 16 ch, 16 pins double file from uint32_t
-	int board;
-	int pin;
-	LPC_GPIO->CLR[0] = (1 << LAT);
-	int chosenCsLcd = desiredCsLcd;
-	for (board = 3; board >= 0; --board) {
-		// LCD Chip select
-		LPC_GPIO->CLR[0] = (1 << SCL);
-		LPC_GPIO->W[0][SI0] = chosenCsLcd == 2*board;
-		LPC_GPIO->W[0][SI1] = chosenCsLcd == 2*board+1;
-		LPC_GPIO->SET[0] = (1 << SCL);
-
-		// LCD Reset
-		LPC_GPIO->CLR[0] = (1 << SCL);
-		LPC_GPIO->W[0][SI0] = 0;
-		LPC_GPIO->W[0][SI1] = 0;
-		LPC_GPIO->SET[0] = (1 << SCL);
-
-		int indexbase = 4 * board + colour;
-		for (pin = 13; pin >= 0; pin--) {
-			LPC_GPIO->CLR[0] = (1 << SCL);
-			LPC_GPIO->W[0][SI0] = buffer[indexbase][pin] > thresh;
-			LPC_GPIO->W[0][SI1] = buffer[indexbase + 2][pin] > thresh;
-			LPC_GPIO->SET[0] = (1 << SCL);
-		}
-		LPC_GPIO->CLR[0] = (1 << SCL);
-	}
-
-	subframe = (subframe + 1) % DS_CYCLES;
-	//if (subframe == 0)
-	colour ^= COL_FLIP[subframe];
 	actualCsLcd = chosenCsLcd;
 
-	encoder_usb_poll();
+	if (subframe >= SUBFRAMES - 2) {
+		uint8_t mask = (subframe - (SUBFRAMES - 2)) << 1;
+
+		int board;
+		int pin;
+		LPC_GPIO->CLR[0] = (1 << LAT);
+		chosenCsLcd = desiredCsLcd;
+		for (board = 3; board >= 0; --board) {
+			// LCD Chip select
+			LPC_GPIO->CLR[0] = (1 << SCL);
+			LPC_GPIO->W[0][SI0] = chosenCsLcd == 2*board;
+			LPC_GPIO->W[0][SI1] = chosenCsLcd == 2*board+1;
+			LPC_GPIO->SET[0] = (1 << SCL);
+
+			// LCD Reset
+			LPC_GPIO->CLR[0] = (1 << SCL);
+			LPC_GPIO->W[0][SI0] = 0;
+			LPC_GPIO->W[0][SI1] = 0;
+			LPC_GPIO->SET[0] = (1 << SCL);
+
+			int indexbase = 4 * board + colour;
+			for (pin = 13; pin >= 0; pin--) {
+				LPC_GPIO->CLR[0] = (1 << SCL);
+				LPC_GPIO->W[0][SI0] = buffer[indexbase][pin] & mask;
+				LPC_GPIO->W[0][SI1] = buffer[indexbase + 2][pin] & mask;
+				LPC_GPIO->SET[0] = (1 << SCL);
+			}
+			LPC_GPIO->CLR[0] = (1 << SCL);
+		}
+	} else if ((subframe & 1) == 0) {
+
+		uint8_t thresh = DS_THRESH[subframe/2];
+
+		int board;
+		int pin;
+		LPC_GPIO->CLR[0] = (1 << LAT);
+		int chosenCsLcd = desiredCsLcd;
+		for (board = 3; board >= 0; --board) {
+			// LCD Chip select
+			LPC_GPIO->CLR[0] = (1 << SCL);
+			LPC_GPIO->W[0][SI0] = chosenCsLcd == 2*board;
+			LPC_GPIO->W[0][SI1] = chosenCsLcd == 2*board+1;
+			LPC_GPIO->SET[0] = (1 << SCL);
+
+			// LCD Reset
+			LPC_GPIO->CLR[0] = (1 << SCL);
+			LPC_GPIO->W[0][SI0] = 0;
+			LPC_GPIO->W[0][SI1] = 0;
+			LPC_GPIO->SET[0] = (1 << SCL);
+
+			int indexbase = 4 * board + colour;
+			for (pin = 13; pin >= 0; pin--) {
+				LPC_GPIO->CLR[0] = (1 << SCL);
+				LPC_GPIO->W[0][SI0] = buffer[indexbase][pin] >= thresh;
+				LPC_GPIO->W[0][SI1] = buffer[indexbase + 2][pin] >= thresh;
+				LPC_GPIO->SET[0] = (1 << SCL);
+			}
+			LPC_GPIO->CLR[0] = (1 << SCL);
+		}
+	} else {
+		//for (int i=0; i < 10; i++) {
+			ambient_measure();
+			touch_measure();
+		//}
+		encoder_usb_poll();
+	}
+
+	subframe = (subframe + 1) % SUBFRAMES;
+	//if (subframe == 0)
+	colour ^= COL_FLIP[subframe];
 }
 
 void handleInterruptOnEp4Out() {
