@@ -285,15 +285,9 @@ int main(void) {
     // TODO
 
 
-    LPC_TIMER32_1->TC = 0;
-    LPC_TIMER32_1->PR = 48 - 1;
+
 
     LPC_TIMER32_1->TCR = 0b1;
-    LPC_TIMER32_1->MCR = 3; // Reset and interrupt on MR0 match
-    LPC_TIMER32_1->MR[0] = 199;
-
-	NVIC_EnableIRQ(TIMER_32_1_IRQn);
-	NVIC_SetPriority(TIMER_32_1_IRQn, 0);
 
     __enable_irq();
 
@@ -362,9 +356,4 @@ int main(void) {
     return 0;
 }
 
-volatile int countrrz = 0;
 
-void TIMER32_1_IRQHandler (void) {
-	LPC_TIMER32_1->IR = 1;
-	handle_timer_interrupt();
-}

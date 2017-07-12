@@ -7,6 +7,7 @@
 
 #include "ambient.h"
 #include "chip.h"
+#include "encoder.h"
 #include "led.h"
 #include "touch.h"
 #include "usb.h"
@@ -20,20 +21,21 @@
 
 volatile uint32_t datums[8];
 
-uint8_t buffer[32][14];
+uint16_t buffer[32][14];
 
-#define SUBFRAMES 40
-#define DS_LEN (SUBFRAMES/2-1)
+#define SUBFRAMES 42
+#define FRACTIONALS 4
+#define DS_LEN ((SUBFRAMES-FRACTIONALS)/2)
 
 // EBR algorithm
 // From Dan Gordon, "A derandomization approach to recovering bandlimited signals across a wide range of random sampling rates"
 #define S(i) (((i) < k) ? (i) : ((i)+1))
-void ebr(uint8_t* a, uint8_t n) {
+void ebr(uint16_t* a, uint16_t n) {
 	if (n == 1) {
 		a[0] = 0;
 		return;
 	}
-	uint8_t k = n / 2;
+	uint16_t k = n / 2;
 
 	// Recursive call with half the array size
 	ebr(a, k);
@@ -61,8 +63,11 @@ void ebr(uint8_t* a, uint8_t n) {
 }
 #undef S
 
-uint8_t DS_THRESH[DS_LEN];
+uint16_t DS_THRESH[DS_LEN];
 uint8_t COL_FLIP[SUBFRAMES];
+uint16_t FR_PWM[FRACTIONALS]; // ..., PERIOD/4, PERIOD/2, 0xffff
+
+#define PERIOD (200 * 48)
 
 void tlc5928_init() {
 
@@ -77,7 +82,7 @@ void tlc5928_init() {
 
 	ebr(DS_THRESH, DS_LEN);
 	for (int i = 0; i < DS_LEN; i++) {
-		DS_THRESH[i] = (DS_THRESH[i] + 1)*4;
+		DS_THRESH[i] = (DS_THRESH[i] + 1) << FRACTIONALS;
 	}
 
 	int count = 0;
@@ -88,16 +93,37 @@ void tlc5928_init() {
 		COL_FLIP[0] = 0;
 	}
 
+	count = PERIOD;
+	for (int i = FRACTIONALS-2; i >= 0; i--) {
+		count /= 2;
+		FR_PWM[i] = count;
+	}
+	FR_PWM[FRACTIONALS-1] = 0xffff;
+
     LPC_IOCON->PIO0[LAT] = 0x81;
     LPC_IOCON->PIO0[SCL] = 0x81;
     LPC_IOCON->PIO0[SI0] = 0x81;
     LPC_IOCON->PIO0[SI1] = 0x81;
+    LPC_IOCON->PIO0[BLANK] = 0x82; // CT32B1_MAT3
+
 
 	LPC_GPIO->DIR[0] |= (1 << LAT) | (1 << SCL) | (1 << SI0) | (1 << SI1) | (1 << BLANK);
 	LPC_GPIO->SET[0] = (1 << LAT) | (1 << SCL) | (1 << SI0) | (1 << SI1) | (0 << BLANK);
 
 	// Enable interrupt on EP4OUT (LED stuffs)
 	LPC_USB->INTEN |= 1 << 8;
+
+	LPC_TIMER32_1->TC = 0;
+	LPC_TIMER32_1->PR = 1 - 1;
+	LPC_TIMER32_1->MCR = 0b1010; // Reset on MR0 match, Interrupt on MR1 match
+	LPC_TIMER32_1->MR[0] = PERIOD - 1;
+	LPC_TIMER32_1->MR[1] = PERIOD - 1 - 81;
+	LPC_TIMER32_1->MR[3] = 0xffff;
+	LPC_TIMER32_1->PWMC = 1 << 3;
+
+	NVIC_EnableIRQ(TIMER_32_1_IRQn);
+	NVIC_SetPriority(TIMER_32_1_IRQn, 0);
+
 }
 
 void tlc5928_broadcast(uint16_t state) {
@@ -171,14 +197,19 @@ void setCsLcd(int desired) {
 uint8_t subframe = 0;
 uint8_t colour = 0;
 
+volatile uint32_t tcattime = -1;
+
 void handle_timer_interrupt() {
 	LPC_GPIO->CLR[0] = (1 << 23 /* touch sensor */);
 	LPC_GPIO->CLR[0] = (1 << BLANK);
+	//tcattime = LPC_TIMER32_1->TC;
 	LPC_GPIO->SET[0] = (1 << LAT);
 	actualCsLcd = chosenCsLcd;
 
-	if (subframe >= SUBFRAMES - 2) {
-		uint8_t mask = (subframe - (SUBFRAMES - 2)) << 1;
+	if (subframe >= SUBFRAMES - FRACTIONALS) {
+		// 1, 2
+		uint8_t fractionalId = subframe - (SUBFRAMES - FRACTIONALS);
+		uint8_t mask = 1 << fractionalId;
 
 		int board;
 		int pin;
@@ -206,6 +237,8 @@ void handle_timer_interrupt() {
 			}
 			LPC_GPIO->CLR[0] = (1 << SCL);
 		}
+		LPC_TIMER32_1->MR[3] = FR_PWM[fractionalId];
+
 	} else if ((subframe & 1) == 0) {
 
 		uint8_t thresh = DS_THRESH[subframe/2];
@@ -247,6 +280,11 @@ void handle_timer_interrupt() {
 	subframe = (subframe + 1) % SUBFRAMES;
 	//if (subframe == 0)
 	colour ^= COL_FLIP[subframe];
+}
+
+void TIMER32_1_IRQHandler (void) {
+	LPC_TIMER32_1->IR = 2;
+	handle_timer_interrupt();
 }
 
 void handleInterruptOnEp4Out() {
