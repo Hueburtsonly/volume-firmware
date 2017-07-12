@@ -16,4 +16,11 @@ void tlc5928_send();
 void tlc5928_demo(int active);
 void setCsLcd(int desired);
 
+#define SUBFRAMES 42
+#define FRACTIONALS 4
+
+extern volatile uint8_t subframe;
+
+#define lcd_cs_unsafe() (subframe >= SUBFRAMES - FRACTIONALS - 1)
+
 #endif /* TLC5928_H_ */

@@ -7,8 +7,9 @@
  *      Author: Hueburtsonly
  */
 
-
+#include "lcd.h"
 #include "chip.h"
+#include "tlc5928.h"
 
 #define DSI 2
 #define DSCL 20
@@ -26,6 +27,8 @@ static inline void out(uint8_t v, uint8_t is_data) {
 	//CS = 0;
 
 	LPC_GPIO->W[0][DRS] = is_data;
+
+	while (lcd_cs_unsafe());
 
 	for (int k=0; k<8; k++){
 

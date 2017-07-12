@@ -5,6 +5,8 @@
  *      Author: Hueburtsonly
  */
 
+#include "tlc5928.h"
+
 #include "ambient.h"
 #include "chip.h"
 #include "encoder.h"
@@ -23,8 +25,7 @@ volatile uint32_t datums[8];
 
 uint16_t buffer[32][14];
 
-#define SUBFRAMES 42
-#define FRACTIONALS 4
+
 #define DS_LEN ((SUBFRAMES-FRACTIONALS)/2)
 
 // EBR algorithm
@@ -73,9 +74,11 @@ void tlc5928_init() {
 
 	for (int startch = 0; startch < 32; startch += 2) {
 		for (int pin = 10; pin < 12; pin++) {
-			buffer[startch][pin] = (pin == 11) ? 0xff: 0;
-			buffer[startch+1][pin] = (pin == 10) ? 0xff: 0;
+			buffer[startch][pin] = (pin == 11) ? 0xffff: 0;
+			buffer[startch+1][pin] = (pin == 10) ? 0xffff: 0;
 		}
+		buffer[startch][12] = 0; //0xff;
+		buffer[startch+1][12] = 0; //0xff;
 		buffer[startch][13] = 0xff;
 		buffer[startch+1][13] = 0xff;
 	}
@@ -194,7 +197,7 @@ void setCsLcd(int desired) {
 }
 
 
-uint8_t subframe = 0;
+uint8_t volatile subframe = 0;
 uint8_t colour = 0;
 
 volatile uint32_t tcattime = -1;
@@ -241,7 +244,7 @@ void handle_timer_interrupt() {
 
 	} else if ((subframe & 1) == 0) {
 
-		uint8_t thresh = DS_THRESH[subframe/2];
+		uint16_t thresh = DS_THRESH[subframe/2];
 
 		int board;
 		int pin;
