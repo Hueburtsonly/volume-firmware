@@ -240,7 +240,7 @@ ALIGNED(4) uint8_t USB_FsConfigDescriptor[] = {
 		USB_ENDPOINT_DESCRIPTOR_TYPE,		/* bDescriptorType */
 		USB_VOLUME_LED_OUT_EP,						/* bEndpointAddress */
 		USB_ENDPOINT_TYPE_INTERRUPT /*ISOCHRONOUS*/,				/* bmAttributes */
-		WBVAL(50),		/* wMaxPacketSize */
+		WBVAL(52),		/* wMaxPacketSize */
 		8,	/* bInterval: 1ms for isochronous */
 #endif
 

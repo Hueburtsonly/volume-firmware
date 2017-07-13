@@ -293,19 +293,19 @@ void TIMER32_1_IRQHandler (void) {
 void handleInterruptOnEp4Out() {
 	if (!(EPLIST[EP4OUT] & (1 << 31))) {
 
-		uint8_t startch = EPBUFFER(EP4OUT)[0] * 2;
+		for (int offset = 0; offset < 52; offset += 26) {
 
+			uint8_t startch = EPBUFFER(EP4OUT)[offset] * 2;
 
-		for (int led = 0; led < 12; led++) {
-			int pin = led;
-			if (led >= 10) pin += 2;
-			buffer[startch][pin] = EPBUFFER(EP4OUT)[2 + led];
-			buffer[startch+1][pin] = EPBUFFER(EP4OUT)[2 + 12 + led];
-			buffer[startch+2][pin] = EPBUFFER(EP4OUT)[2 + 24 + led];
-			buffer[startch+3][pin] = EPBUFFER(EP4OUT)[2 + 36 + led];
+			for (int led = 0; led < 12; led++) {
+				int pin = led;
+				if (led >= 10) pin += 2;
+				buffer[startch][pin] = EPBUFFER(EP4OUT)[offset + 2 + led];
+				buffer[startch+1][pin] = EPBUFFER(EP4OUT)[offset + 2 + 12 + led];
+			}
 		}
 
-		activateEndpoint(EP4OUT, 50);
+		activateEndpoint(EP4OUT, 52);
 	}
 }
 

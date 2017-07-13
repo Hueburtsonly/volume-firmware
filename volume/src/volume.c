@@ -309,7 +309,7 @@ int main(void) {
 
 //for (;;) TIMER32_1_IRQHandler();
 
-    activateEndpoint(EP4OUT, 50);
+    activateEndpoint(EP4OUT, 52);
 
 #define DISPLAYBUF 516
 
