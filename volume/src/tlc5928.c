@@ -290,6 +290,12 @@ void TIMER32_1_IRQHandler (void) {
 	handle_timer_interrupt();
 }
 
+#define BRIGHTSCALE (DS_LEN << FRACTIONALS)
+
+static inline uint16_t gamma2(uint8_t x) {
+	return ((uint32_t)((uint16_t)x * (uint16_t)x) * (uint32_t)BRIGHTSCALE + 0x8000) >> 16;
+}
+
 void handleInterruptOnEp4Out() {
 	if (!(EPLIST[EP4OUT] & (1 << 31))) {
 
@@ -300,8 +306,8 @@ void handleInterruptOnEp4Out() {
 			for (int led = 0; led < 12; led++) {
 				int pin = led;
 				if (led >= 10) pin += 2;
-				buffer[startch][pin] = EPBUFFER(EP4OUT)[offset + 2 + led];
-				buffer[startch+1][pin] = EPBUFFER(EP4OUT)[offset + 2 + 12 + led];
+				buffer[startch][pin] = gamma2(EPBUFFER(EP4OUT)[offset + 2 + led]);
+				buffer[startch+1][pin] = gamma2(EPBUFFER(EP4OUT)[offset + 2 + 12 + led]);
 			}
 		}
 
