@@ -4,7 +4,7 @@ This glorious piece of firmware is responsible for controlling the world's **BES
 
 ## Setup 
 
-This software is build using NXP LPCXpresso. This tool is free but requires a registration and a multi-step activation.
+This software is built using NXP LPCXpresso. This tool is free but requires a registration and a multi-step activation.
 
 * Install your venti-soy-quadruple-shot-trim LPCXpresso IDE. [Latest from here possibly.](https://nxp.flexnetoperations.com/control/frse/product?entitlementId=240358107&lineNum=1)
 
