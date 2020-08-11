@@ -74,7 +74,7 @@ void lcd_disp(unsigned char *lcd_string)
 	char is_blank = 1;
 	unsigned int i,j;
 	unsigned char page = 0xB0;			//Page Address + 0xB0
-	comm_out(0xAE);					//Display OFF
+
 	comm_out(0x40);					//Display start address + 0x40
 	for(i=0;i<4;i++){				//32pixel display / 8 pixels per page = 4 pages
 		comm_out(page);				//send page address
@@ -87,8 +87,11 @@ void lcd_disp(unsigned char *lcd_string)
 			}
 		page++;					//after 128 columns, go to next page
    		}
-	if (!is_blank)
+	if (is_blank) {
+		comm_out(0xAE);					//Display OFF
+	} else {
 		comm_out(0xAF);					//Display ON
+	}
 }
 
 void lcd_soft_init(int index) {
