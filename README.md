@@ -6,7 +6,7 @@ This glorious piece of firmware is responsible for controlling the world's **BES
 
 This software is built using NXP LPCXpresso. This tool is free but requires a registration and a multi-step activation.
 
-* Install your venti-soy-quadruple-shot-trim LPCXpresso IDE. [Latest from here possibly.](https://nxp.flexnetoperations.com/control/frse/product?entitlementId=240358107&lineNum=1)
+* Install your venti-soy-quadruple-shot-trim [LPCXpresso IDE](https://www.nxp.com/design/microcontrollers-developer-resources/lpc-microcontroller-utilities:LPC-UTILITIES).
 
 * Create a serial number: Help -> Activate -> Create serial number and register (Free edition)...
 
@@ -14,7 +14,7 @@ This software is built using NXP LPCXpresso. This tool is free but requires a re
 
 * Enter activation code: Help -> Activate -> Activate (Free edition)...
 
-* Add EGit for LPCTrimLatte. [Instructions here (possibly).](http://download.eclipse.org/egit/updates/)
+* Add EGit for LPCTrimLatte. [Instructions here (possibly).](http://download.eclipse.org/egit/updates/) Only the "Git integration for Eclipse" feature is required.
 
 * Import project into workspace: File -> Import -> Git -> Projects from Git -> (clone or local)
 
