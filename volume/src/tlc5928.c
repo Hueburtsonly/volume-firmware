@@ -137,10 +137,10 @@ void tlc5928_broadcast(uint16_t state) {
 }
 
 static const uint16_t DEMOS[4] = {
-	0b0001011010101010,
-	0b0001010101010101,
-	0b0001101010101010,
-	0b0001100101010101
+	0b0000000000000000,
+	0b0000000000000000,
+	0b0000000000000000,
+	0b0000000000000000
 };
 
 void tlc5928_demo(int active) {
@@ -273,10 +273,8 @@ void handle_timer_interrupt() {
 			LPC_GPIO->CLR[0] = (1 << SCL);
 		}
 	} else {
-		//for (int i=0; i < 10; i++) {
-			ambient_measure();
-			touch_measure();
-		//}
+		ambient_measure();
+		touch_measure();
 		encoder_usb_poll();
 	}
 

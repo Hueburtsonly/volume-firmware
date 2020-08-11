@@ -100,102 +100,8 @@ static void setupBoardClocking(void)
 	/* Wait for PLL to lock */
 	while (!Chip_Clock_IsUSBPLLLocked()) {}
 }
-/*
-static int32_t parseInt32(const char** it) {
-	int32_t v = 0;
-	int m = 1;
-
-	if (**it == '-') {
-		m = -1;
-		++*it;
-	}
-	while (**it >= '0' && **it <= '9') {
-		v = v * 10 + (int32_t)(**it - '0');
-		++*it;
-	}
-	return v * m;
-}
-
-void handle(const char* str) {
-	if (*str == 0) {
-		encoder_cdc_demo();
-		return;
-	} else if (*str == 'l' || *str == 'L') {
-		ambient_measure();
-		return;
-	} else if (*str == 't' || *str == 'T') {
-		int i;
-		cdc_write_str("Printing raw touch samples:\r\n");
-		for (i = 0; i < 5000; i++) {
-			int ijk;
-			for (ijk = 0; ijk < 10000; ijk++);
-
-			touch_sample();
 
 
-		}
-		return;
-	} else if (*str == 'd' || *str == 'D') {
-		lcd_test_pattern();
-		return;
-	} else if (*str == 'r' || *str == 'R') {
-		int i;
-		cdc_write_str("Producing test patterns... ");
-
-		for (i = 0; i < 128; i++) {
-			int ijk;
-			for (ijk = 0; ijk < 100000; ijk++);
-
-			// triiger blue
-			// analog red
-#define pin_hi led_off
-#define pin_lo led_on
-
-			if (i == 0) {
-				pin_lo(LED_BLUE);
-				pin_hi(LED_BLUE);
-				pin_lo(LED_RED);
-				pin_hi(LED_RED);
-				pin_lo(LED_RED);
-				pin_hi(LED_RED);
-				pin_hi(LED_RED);
-			} else if (i == 127) {
-				pin_lo(LED_BLUE);
-				pin_hi(LED_BLUE);
-				pin_lo(LED_RED);
-				pin_hi(LED_RED);
-				pin_hi(LED_RED);
-				pin_lo(LED_RED);
-				pin_hi(LED_RED);
-			} else {
-				pin_lo(LED_BLUE);
-				pin_hi(LED_BLUE);
-				pin_lo(LED_RED);
-				pin_hi(LED_RED);
-				pin_hi(LED_RED);
-				pin_hi(LED_RED);
-				pin_hi(LED_RED);
-			}
-
-
-		}
-
-		cdc_write_str("Done.\r\n");
-		return;
-	} else if (*str == '&') {
-		/ *cdc_write_str("TLC test mode\r\n");
-		for (;;) {
-			test5928();
-		}* /
-		return;
-	}
-
-	cdc_write_str("Got this: \"");
-	cdc_write_str(str);
-	cdc_write_str("\"\r\n");
-
-}
-*/
 volatile int debug = 0;
 
 int main(void) {
@@ -216,7 +122,7 @@ int main(void) {
     LPC_SYSCTL->SYSAHBCLKCTRL |= (1 << 6) | (0xf << 7) | (1 << 12) | (1 << 13) | (1 << 14) | (1 << 16) | (1 << 26) | (1 << 27);
 	LPC_IOCON->PIO0[18] = 0x1; // RXD=RXD
 	LPC_IOCON->PIO0[19] = 0x1; // TXD=TXD
-//383
+
     Chip_UART_Init(LPC_USART);
 
     led_init();
@@ -247,44 +153,28 @@ int main(void) {
     led_off(LED_BLUE);
 
 
-    //tlc5928_broadcast(0b1001111111111111);
-
-    //for (;;) {
-
     // Reset displays
-    tlc5928_broadcast(0b0110101010101010);
+    tlc5928_broadcast(0b0100000000000000);
 
     // Wait for display reset
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
-    tlc5928_broadcast(0b0010101010101010);
+    tlc5928_broadcast(0b0000000000000000);
+    tlc5928_broadcast(0b0000000000000000);
+    tlc5928_broadcast(0b0000000000000000);
+    tlc5928_broadcast(0b0000000000000000);
+    tlc5928_broadcast(0b0000000000000000);
+    tlc5928_broadcast(0b0000000000000000);
+    tlc5928_broadcast(0b0000000000000000);
+    tlc5928_broadcast(0b0000000000000000);
+    tlc5928_broadcast(0b0000000000000000);
+    tlc5928_broadcast(0b0000000000000000);
+    tlc5928_broadcast(0b0000000000000000);
+    tlc5928_broadcast(0b0010000000000000);
 
-    // CS all displays + LED pattern
-//    tlc5928_broadcast(0b1000011010101010);
+    // Display test images
     for (int i = 0; i < 8; i++) {
-    	tlc5928_demo(i & 3);
-    	lcd_soft_init(i & 3);
+    	tlc5928_demo(i);
+    	lcd_soft_init(i);
     }
-
-
-    //lcd_test_pattern();
-
-    //for (int kk = 0; kk < 17000; kk++) {
-    //tlc5928_broadcast(0b0010101010101010);}
-    //}
-    // Display test image
-    // TODO
-
-
 
 
     LPC_TIMER32_1->TCR = 0b1;
@@ -293,10 +183,6 @@ int main(void) {
 
     led_on(LED_BLUE);
     led_on(LED_GREEN);
-
-    //for (;;) {
-    //	debug = LPC_TIMER32_1->IR;
-    //}
 
     //dprintf("(2/3) CDC/USB...");
     cdc_init();
@@ -307,21 +193,12 @@ int main(void) {
     led_off(LED_RED);
 
 
-//for (;;) TIMER32_1_IRQHandler();
-
     activateEndpoint(EP4OUT, 52);
 
 #define DISPLAYBUF 516
 
-    //for (;;) {
-    //	LPC_GPIO->NOT[0] = (1 << 23);
-    //}
 #define EX(v, k) ((uint16_t)((displayBuf)[(k)]) | ((uint16_t)((displayBuf)[(k)+1]) << 8))
     for (;;) {
-    	//char str[80];
-    	//memset(str, 0, 80);
-    	//cdc_read_line(str, 79);
-    	//handle(str);
 
     	ALIGNED(4) uint8_t displayBuf[DISPLAYBUF];
 
