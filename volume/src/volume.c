@@ -195,7 +195,7 @@ int main(void) {
 
     activateEndpoint(EP4OUT, 52);
 
-#define DISPLAYBUF 516
+#define DISPLAYBUF 520
 
 #define EX(v, k) ((uint16_t)((displayBuf)[(k)]) | ((uint16_t)((displayBuf)[(k)+1]) << 8))
     for (;;) {

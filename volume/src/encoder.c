@@ -27,7 +27,7 @@ void encoder_init() {
 
 
 uint8_t encstate[MAX_CHANNELS];
-int16_t enccount[MAX_CHANNELS];
+uint16_t enccount[MAX_CHANNELS];
 
 uint8_t btnstate[MAX_CHANNELS];
 uint16_t btncount[MAX_CHANNELS];
@@ -130,14 +130,28 @@ void encoder_cdc_demo() {
 	}
 }
 
-
-int16_t usbenccount[MAX_CHANNELS];
-uint16_t usbbtncount[MAX_CHANNELS];
+uint8_t polling_decimation = 0;
 
 void encoder_usb_poll() {
+
+	encoder_scan();
+
+	// Reduce polling rate
+	if (++polling_decimation < 100) {
+		return;
+	}
+	polling_decimation = 0;
+
+	// Bail out if previous packet hasn't been collected yet.
+	if (EPLIST[EP3IN] & (1 << 31)) {
+		return;
+	}
+
+	char* buffer = (EPBUFFER(EP3IN));
+
 	// Protocol: 38-byte packet
-	// 0x00: Number channels
-	// 0x01: reserved
+	// 0x00: reserved (protocol version?)
+	// 0x01: Number channels
 	// 0x02: Touch
 	// 0x03: ^
 	// 0x04: Ambient
@@ -147,34 +161,19 @@ void encoder_usb_poll() {
 	// 0x08: Encoder 1
 	// ...
 	// 0x24: Encoder 15
-	// 0x25: Encoder 16
-	encoder_scan();
+	// 0x25: Button 15
 
-	if (EPLIST[EP3IN] & (1 << 31)) {
-		// Previous packet hasn't been collected yet
-		return;
-	}
-
-	(EPBUFFER(EP3IN))[0] = channel_count;
-	(EPBUFFER(EP3IN))[2] = touch_result & 0xff;
-	(EPBUFFER(EP3IN))[3] = (touch_result >> 8) & 0xff;
-	(EPBUFFER(EP3IN))[4] = ambient_result & 0xff;
-	(EPBUFFER(EP3IN))[5] = (ambient_result >> 8) & 0xff;
+	buffer[0] = 3;
+	buffer[1] = channel_count;
+	buffer[2] = touch_result & 0xff;
+	buffer[3] = (touch_result >> 8) & 0xff;
+	buffer[4] = ambient_result & 0xff;
+	buffer[5] = (ambient_result >> 8) & 0xff;
 
 	for (int ch = 0; ch < channel_count; ch++) {
-
-		int16_t delta = (enccount[ch] / 4) - usbenccount[ch];
-		if (delta > 127) delta = 127;
-		if (delta < -127) delta = -127;
-		usbenccount[ch] += delta;
-
-		(EPBUFFER(EP3IN))[6 + ch * 2] = delta;
-		(EPBUFFER(EP3IN))[6 + ch * 2 + 1] = btncount[ch];
+		buffer[6 + ch * 2] = (enccount[ch] + 2) >> 2;
+		buffer[6 + ch * 2 + 1] = btncount[ch];
 	}
 
-
 	activateEndpoint(EP3IN, 38);
-
-
-//	sendToEndpoint(EP1IN, data, length);
 }
