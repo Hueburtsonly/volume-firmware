@@ -78,6 +78,10 @@ void handleGetDescriptor(uint16_t wValue, uint16_t wIndex, uint16_t wLength) {
 			}
 		}
 		break;
+	case 0x0F: // BOS
+		dprintf("  BOS.");
+		sendToEp0InWithStatusPacket(USB_BOSDescriptor, USB_BOS_DESC_TOTAL_LENGTH, wLength);
+		break;
 	case 0x06:
 		dprintf("  0x06: Fullspeed attempt");
 

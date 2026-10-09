@@ -11,6 +11,7 @@
 #include "debug.h"
 #include "usbd/usbd.h"
 #include "usb.h"
+#include "usb_desc.h"
 
 #include "string.h"
 
@@ -66,6 +67,15 @@ void handleNonGenericSetup(
 		// Set line coding
 		dprintf("Set line coding: %d %d %d", wValue, wIndex, wLength);
 		handleSetLineCoding(wValue, wIndex, wLength);
+		break;
+	case 0xc0:
+		// Device to Host, Vendor, Device
+		if (bRequest == USB_MS_VENDOR_CODE && wIndex == USB_MS_OS_20_DESCRIPTOR_INDEX) {
+			dprintf("MS OS 2.0 descriptor set.");
+			sendToEp0InWithStatusPacket(USB_MsOs20DescriptorSet, USB_MS_OS_20_DESC_SET_LENGTH, wLength);
+		} else {
+			dprintf("Unknown vendor request: bRequest = %d, wIndex = %d", bRequest, wIndex);
+		}
 		break;
 	default:
     	// Unknown bmRequestType

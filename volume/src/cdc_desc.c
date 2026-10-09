@@ -55,7 +55,6 @@
  */
 #define USB_CDC_CIF_NUM         0
 #define USB_CDC_DIF_NUM         1
-#define USB_VOLUME_VIF_NUM         2
 
 #define USB_CDC_IN_EP           0x81
 #define USB_CDC_OUT_EP          0x01
@@ -66,6 +65,14 @@
 
 //#define CDCBIT
 #define BONUS
+
+/* Interfaces must be numbered from 0, so the volume interface's number
+   depends on whether the two CDC interfaces precede it. */
+#ifdef CDCBIT
+#define USB_VOLUME_VIF_NUM         2
+#else
+#define USB_VOLUME_VIF_NUM         0
+#endif
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -81,18 +88,75 @@
 ALIGNED(4) const uint8_t USB_DeviceDescriptor[] = {
 	USB_DEVICE_DESC_SIZE,				/* bLength */
 	USB_DEVICE_DESCRIPTOR_TYPE,			/* bDescriptorType */
-	WBVAL(0x0200),						/* bcdUSB 0x0200 */
+	WBVAL(0x0201),						/* bcdUSB 0x0201: 2.01 so Windows asks for the BOS descriptor */
 	0xFE,								/* bDeviceClass */
 	0x00,								/* bDeviceSubClass */
 	0x00,								/* bDeviceProtocol */
 	USB_MAX_PACKET0,					/* bMaxPacketSize0 */
 	WBVAL(0x6b56),						/* idVendor */
 	WBVAL(0x8802),						/* idProduct */
-	WBVAL(0x0100),						/* bcdDevice */
+	WBVAL(0x0101),						/* bcdDevice: bumped so Windows re-reads cached descriptors */
 	0x01,								/* iManufacturer */
 	0x02,								/* iProduct */
 	0x03,								/* iSerialNumber */
 	0x01								/* bNumConfigurations */
+};
+
+/**
+ * BOS Descriptor carrying the Microsoft OS 2.0 platform capability.
+ * Windows 8.1+ reads it and then fetches USB_MsOs20DescriptorSet with
+ * a vendor request, which tells it to bind the inbox (Microsoft-signed)
+ * WinUSB driver. No INF, no custom driver, no test mode.
+ */
+ALIGNED(4) const uint8_t USB_BOSDescriptor[] = {
+	/* BOS header */
+	0x05,								/* bLength */
+	0x0F,								/* bDescriptorType: BOS */
+	WBVAL(USB_BOS_DESC_TOTAL_LENGTH),	/* wTotalLength */
+	0x01,								/* bNumDeviceCaps */
+	/* Microsoft OS 2.0 platform capability descriptor */
+	0x1C,								/* bLength */
+	0x10,								/* bDescriptorType: DEVICE CAPABILITY */
+	0x05,								/* bDevCapabilityType: PLATFORM */
+	0x00,								/* bReserved */
+	/* PlatformCapabilityUUID D8DD60DF-4589-4CC7-9CD2-659D9E648A9F */
+	0xDF, 0x60, 0xDD, 0xD8, 0x89, 0x45, 0xC7, 0x4C,
+	0x9C, 0xD2, 0x65, 0x9D, 0x9E, 0x64, 0x8A, 0x9F,
+	0x00, 0x00, 0x03, 0x06,				/* dwWindowsVersion: Windows 8.1 */
+	WBVAL(USB_MS_OS_20_DESC_SET_LENGTH),	/* wMSOSDescriptorSetTotalLength */
+	USB_MS_VENDOR_CODE,					/* bMS_VendorCode */
+	0x00								/* bAltEnumCode */
+};
+
+/**
+ * Microsoft OS 2.0 descriptor set, returned for the vendor request
+ * (bmRequestType 0xC0, bRequest USB_MS_VENDOR_CODE, wIndex 0x0007).
+ */
+ALIGNED(4) const uint8_t USB_MsOs20DescriptorSet[] = {
+	/* Descriptor set header */
+	WBVAL(0x000A),						/* wLength */
+	WBVAL(0x0000),						/* wDescriptorType: MS_OS_20_SET_HEADER_DESCRIPTOR */
+	0x00, 0x00, 0x03, 0x06,				/* dwWindowsVersion: Windows 8.1 */
+	WBVAL(USB_MS_OS_20_DESC_SET_LENGTH),	/* wTotalLength */
+	/* Compatible ID: WINUSB */
+	WBVAL(0x0014),						/* wLength */
+	WBVAL(0x0003),						/* wDescriptorType: MS_OS_20_FEATURE_COMPATBLE_ID */
+	'W', 'I', 'N', 'U', 'S', 'B', 0, 0,	/* CompatibleID */
+	0, 0, 0, 0, 0, 0, 0, 0,				/* SubCompatibleID */
+	/* Registry property: DeviceInterfaceGUIDs, so user mode (LibUsbDotNet) can find the device */
+	WBVAL(0x0084),						/* wLength */
+	WBVAL(0x0004),						/* wDescriptorType: MS_OS_20_FEATURE_REG_PROPERTY */
+	WBVAL(0x0007),						/* wPropertyDataType: REG_MULTI_SZ */
+	WBVAL(0x002A),						/* wPropertyNameLength */
+	'D', 0, 'e', 0, 'v', 0, 'i', 0, 'c', 0, 'e', 0, 'I', 0, 'n', 0, 't', 0, 'e', 0,
+	'r', 0, 'f', 0, 'a', 0, 'c', 0, 'e', 0, 'G', 0, 'U', 0, 'I', 0, 'D', 0, 's', 0,
+	0, 0,
+	WBVAL(0x0050),						/* wPropertyDataLength */
+	'{', 0, '7', 0, '0', 0, '2', 0, '9', 0, '5', 0, '1', 0, '4', 0, 'F', 0, '-', 0,
+	'A', 0, '1', 0, '7', 0, 'C', 0, '-', 0, '4', 0, '7', 0, '9', 0, 'D', 0, '-', 0,
+	'9', 0, '5', 0, 'A', 0, '3', 0, '-', 0, '6', 0, '0', 0, '1', 0, '1', 0, '4', 0,
+	'6', 0, '0', 0, '5', 0, '5', 0, '7', 0, '7', 0, 'C', 0, '}', 0,
+	0, 0, 0, 0							/* string terminator + list terminator */
 };
 
 /**
